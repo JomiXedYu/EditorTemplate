@@ -1,8 +1,10 @@
-#include "WindowWorker.h"
+﻿#include "WindowWorker.h"
 #include "ui_WindowWorker.h"
 #include <QMessageBox>
 #include <QFile>
+#include <QFileDialog>
 #include <QDir>
+#include <QApplication>
 
 #include <Window/Dialog/WindowNewProject.h>
 #include <Window/Dialog/WindowNewFile.h>
@@ -14,23 +16,22 @@
 #include <DockManager.h>
 #include <ProjectManager.h>
 
-WindowWorker::WindowWorker(QWidget *parent)
+WindowWorker::WindowWorker(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::WindowWorker)
 {
-    using namespace ads;
     ui->setupUi(this);
+
+
+    using namespace ads;
+
     CDockManager::setConfigFlags(CDockManager::DefaultOpaqueConfig);
     CDockManager::setConfigFlag(CDockManager::FocusHighlighting, false);
     CDockManager::setConfigFlag(CDockManager::AllTabsHaveCloseButton, true);
 
     dockManager = new ads::CDockManager(this);
 
-    QFile qss = QFile(QDir::currentPath() + "/dark.qss");
-    qss.open(QFile::ReadOnly);
     dockManager->setStyleSheet("");
-    //dockManager->setStyleSheet(qss.readAll());
-    qss.close();
 
     CDockWidget* project = new ads::CDockWidget(WindowProject::windowType());
     project->setWidget(new WindowProject);
@@ -50,14 +51,18 @@ WindowWorker::WindowWorker(QWidget *parent)
 
     ui->action_file_new_file->setEnabled(ProjectManager::isOpened());
 
-    ProjectManager::openProjectEvent().AddListener(this, [this](){
-        this->ui->action_file_new_file->setEnabled(true);
-    });
+    this->reloadTitle();
+    this->reloadActionState();
+
+    ProjectManager::openProjectEvent().AddListener(this, [this]() {
+        this->reloadTitle();
+        this->reloadActionState();
+        });
 
     ProjectManager::closedProjectEvent().AddListener(this, [this]() {
-        this->ui->action_file_new_file->setEnabled(false);
-    });
-
+        this->reloadTitle();
+        this->reloadActionState();
+        });
 }
 
 WindowWorker::~WindowWorker()
@@ -67,10 +72,78 @@ WindowWorker::~WindowWorker()
     delete ui;
 }
 
+void WindowWorker::reloadTitle()
+{
+    if (ProjectManager::isOpened()) {
+        this->setWindowTitle(QApplication::applicationDisplayName() + " - " + ProjectManager::projectName());
+    }
+    else {
+        this->setWindowTitle(QApplication::applicationDisplayName());
+    }
+}
+
+static QAction* _findMenu(QList<QAction*> list, QString name)
+{
+    for (auto& item : list)
+    {
+        QMenu* menu = item->menu();
+        if (menu != nullptr && menu->objectName() == name)
+        {
+            return item;
+        }
+    }
+    return nullptr;
+}
+
+void WindowWorker::reloadActionState()
+{
+    bool isopen = ProjectManager::isOpened();
+    this->ui->action_file_closeproj->setEnabled(isopen);
+    this->ui->action_file_new_file->setEnabled(isopen);
+
+    auto recents = ProjectManager::recentProjects();
+
+    QMenu* menu_file = _findMenu(this->menuBar()->actions(), "menu_file")->menu();
+    QMenu* menu_file_recent = _findMenu(menu_file->actions(), "menu_file_recent")->menu();
+
+    for (auto item : menu_file_recent->actions())
+    {
+        if (item->isSeparator() || item->objectName() == "action_file_recent_clear")
+        {
+            continue;
+        }
+        disconnect(item);
+        menu_file_recent->removeAction(item);
+        delete item;
+    }
+
+    for (QString& item : recents)
+    {
+        auto act = new QAction(item, menu_file_recent);
+        
+        connect(act, &QAction::triggered, this,
+            [item]()
+            {
+                if (ProjectManager::closeProject())
+                    ProjectManager::openProject(item);
+            });
+        menu_file_recent->addAction(act);
+    }
+
+}
+
 
 void WindowWorker::on_action_file_new_project_triggered()
 {
-    WindowNewProject::newProject();
+    auto result = WindowNewProject::newProject();
+    if (result.isSuccess)
+    {
+        ProjectManager::newProject(result.projFullPath);
+        if (ProjectManager::closeProject())
+        {
+            ProjectManager::openProject(result.projFullPath);
+        }
+    }
 }
 
 
@@ -78,3 +151,34 @@ void WindowWorker::on_action_file_new_file_triggered()
 {
     WindowNewFile::newFile();
 }
+
+void WindowWorker::on_action_file_openproj_triggered()
+{
+    auto path = QFileDialog::getExistingDirectory(this);
+    if (path.isEmpty())
+    {
+        return;
+    }
+    if (!QDir().exists(path + "/workspace"))
+    {
+        QMessageBox::warning(this, "warning", tr("错误的项目文件夹"));
+        return;
+    }
+    ProjectManager::closeProject();
+    ProjectManager::openProject(path);
+
+}
+
+
+void WindowWorker::on_action_file_closeproj_triggered()
+{
+    ProjectManager::closeProject();
+}
+
+
+void WindowWorker::on_action_file_recent_clear_triggered()
+{
+    ProjectManager::clearRecentProjects();
+    this->reloadActionState();
+}
+

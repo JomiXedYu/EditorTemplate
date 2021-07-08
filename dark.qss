@@ -306,6 +306,9 @@ QMenu {
 	color: #CDCDCD;
 	border: none;
 }
+QMenu::item::!enabled {
+	color: #828282;
+}
 QMenu::item:selected  {
 	background-color: #585858;
 }

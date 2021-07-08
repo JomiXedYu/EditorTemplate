@@ -1,0 +1,10 @@
+[
+	{
+		"type": "Common",
+		"name": "通用"
+	},
+	{
+		"type": "Script",
+		"name": "脚本"
+	}
+]

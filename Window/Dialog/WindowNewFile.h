@@ -10,44 +10,20 @@ namespace Ui {
 }
 
 
-struct NewFileInfo
+
+struct NewFileTypeInfo
 {
-    QString typeIndex;
-    QString typeName;
-    QString group;
-    QString description;
-    QString defaultName;
-    QString defaultPath;
-    void(*newfileCallback)(const QString& fullname);
+    QString type;
+    QString name;
 };
 
-struct NewFileGroup
+struct NewFileTemplateInfo
 {
-    QString groupName;
-    QList<NewFileInfo> items;
+    QString name;
+    QString desc;
+    QString file;
 };
 
-struct NewFileData
-{
-    QList<NewFileGroup> groups;
-
-    inline NewFileGroup* findGroup(const QString& groupName) {
-        for (auto& item : groups) {
-            if (item.groupName == groupName) {
-                return &item;
-            }
-        }
-        return nullptr;
-    }
-    inline NewFileGroup* prepareGroup(const QString& groupName) {
-        NewFileGroup* ret = findGroup(groupName);
-        if (ret == nullptr) {
-            groups.push_back(NewFileGroup());
-            ret = &groups.last();
-        }
-        return ret;
-    }
-};
 
 class WindowNewFile : public QDialog
 {
@@ -60,12 +36,14 @@ public:
 
 private:
     Ui::WindowNewFile* ui;
-    bool isCheck;
+    bool hasResult = false;
 private:
     void clearTypeList();
     void clearState();
 public:
-    static void registerFileType(const NewFileInfo& info);
+    static void registerFileType(const NewFileTypeInfo& type);
+    static void registerFileTemplate(const QString& type, const NewFileTemplateInfo& info);
+
     static QString newFile();
 private slots:
     void on_lst_group_clicked(const QModelIndex& index);

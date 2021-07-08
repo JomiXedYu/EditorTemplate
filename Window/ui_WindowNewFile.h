@@ -146,6 +146,7 @@ public:
         lbl_description->setSizeIncrement(QSize(50, 0));
         lbl_description->setBaseSize(QSize(50, 0));
         lbl_description->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop);
+        lbl_description->setWordWrap(true);
 
         verticalLayout->addWidget(lbl_description);
 

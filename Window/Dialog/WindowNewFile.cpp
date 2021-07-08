@@ -6,15 +6,17 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QDir>
+#include <QMap>
+#include <QList>
+
 #include <ProjectManager.h>
+#include <Window/WindowWorker.h>
 
 WindowNewFile::WindowNewFile() :
-    QDialog(nullptr),
+    QDialog(WindowWorker::getInstance()),
     ui(new Ui::WindowNewFile)
 {
     ui->setupUi(this);
-    //this->setModal(true);
-    //this->setWindowModality(Qt::WindowModality::WindowModal);
 
     QStandardItemModel* group = new QStandardItemModel(ui->lst_group);
     ui->lst_group->setModel(group);
@@ -26,7 +28,7 @@ WindowNewFile::WindowNewFile() :
 }
 
 
-static WindowNewFile* getInstance()
+static WindowNewFile* internal_getInstance()
 {
     static WindowNewFile* instance = new WindowNewFile;
     return instance;
@@ -36,9 +38,16 @@ WindowNewFile::~WindowNewFile()
 {
     delete ui;
 }
-static NewFileData* infos()
+
+static QList<NewFileTypeInfo>* internal_fileTypeInfos()
 {
-    static NewFileData* info = new NewFileData;
+    static auto p = new QList<NewFileTypeInfo>;
+    return p;
+}
+
+static QMap<QString, QList<NewFileTemplateInfo>>* internal_infos()
+{
+    static auto info = new QMap<QString, QList<NewFileTemplateInfo>>;
     return info;
 }
 
@@ -46,7 +55,8 @@ void WindowNewFile::clearTypeList()
 {
     QStandardItemModel* typesModel = static_cast<QStandardItemModel*>(ui->lst_types->model());
     //clear typesList
-    for (int i = 0; i < typesModel->rowCount(); i++) {
+    int count = typesModel->rowCount();
+    for (int i = 0; i < count; i++) {
         delete typesModel->takeItem(0);
         typesModel->removeRow(0);
     }
@@ -60,22 +70,29 @@ void WindowNewFile::clearState()
     ui->lbl_description->setText(QString());
 }
 
-void WindowNewFile::registerFileType(const NewFileInfo& info)
+void WindowNewFile::registerFileType(const NewFileTypeInfo& type)
 {
-    infos()->prepareGroup(info.group)->items.push_back(info);
-    QStandardItemModel* model = static_cast<QStandardItemModel*>(getInstance()->ui->lst_group->model());
-    model->appendRow(new QStandardItem(info.group));
+    internal_fileTypeInfos()->push_back(type);
+    QStandardItemModel* model = static_cast<QStandardItemModel*>(internal_getInstance()->ui->lst_group->model());
+    model->appendRow(new QStandardItem(type.name));
 }
+
+void WindowNewFile::registerFileTemplate(const QString& type, const NewFileTemplateInfo& info)
+{
+    (*internal_infos())[type].append(info);
+}
+
+
 
 QString WindowNewFile::newFile()
 {
-    auto self = getInstance();
-    self->isCheck = false;
+    auto self = internal_getInstance();
+    self->hasResult = false;
     self->clearState();
     self->clearTypeList();
     self->exec();
-    if (!self->isCheck || self->ui->txt_filename->text().isNull() || self->ui->txt_filename->text().isEmpty()) {
-        return QString::Null();
+    if (!self->hasResult || self->ui->txt_filename->text().isNull() || self->ui->txt_filename->text().isEmpty()) {
+        return QString{};
     }
     return self->ui->cmb_path->currentText() + "/" + self->ui->txt_filename->text();
 }
@@ -85,8 +102,10 @@ void WindowNewFile::on_lst_group_clicked(const QModelIndex& index)
     this->clearTypeList();
     QStandardItemModel* typesModel = static_cast<QStandardItemModel*>(ui->lst_types->model());
 
-    for (auto& itemInfo : infos()->groups[index.row()].items) {
-        auto item = new QStandardItem(itemInfo.typeName);
+    auto selType = internal_fileTypeInfos()->at(index.row()).type;
+
+    for (auto& itemInfo : internal_infos()->operator[](selType)) {
+        auto item = new QStandardItem(itemInfo.name);
         item->setSizeHint(QSize(10, 36));
         typesModel->appendRow(item);
     }
@@ -96,12 +115,12 @@ void WindowNewFile::on_lst_group_clicked(const QModelIndex& index)
 
 void WindowNewFile::on_lst_types_clicked(const QModelIndex& index)
 {
-    NewFileInfo info = infos()->groups[ui->lst_group->currentIndex().row()].items[index.row()];
+    auto selType = internal_fileTypeInfos()->at(ui->lst_group->currentIndex().row()).type;
+    auto tmplInfo = internal_infos()->operator[](selType)[index.row()];
 
-    ui->lbl_type->setText(tr("类型：") + info.typeName);
-    ui->lbl_description->setText(info.description);
-    ui->txt_filename->setText(info.defaultName);
-    ui->cmb_path->setCurrentText(info.defaultPath);
+    ui->lbl_type->setText(tr("类型：") + tmplInfo.name);
+    ui->lbl_description->setText(tmplInfo.desc);
+    ui->txt_filename->setText(tmplInfo.file);
 }
 
 
@@ -114,10 +133,11 @@ void WindowNewFile::on_btn_cancel_clicked()
 
 void WindowNewFile::on_btn_ok_clicked()
 {
-    if(ui->cmb_path->currentText().isEmpty()) {
-        QMessageBox::warning(nullptr, "alert", tr("请选择文件模板或输入文件名"));
+    if (ui->txt_filename->text().isEmpty()) {
+        QMessageBox::warning(nullptr, "alert", tr("请输入文件名"));
         return;
     }
+
     QString path = ProjectManager::projectPath() + "/" + ui->cmb_path->currentText();
     if (!QDir(path).exists()) {
         QMessageBox::warning(nullptr, "alert", tr("文件夹不存在"));
@@ -130,7 +150,6 @@ void WindowNewFile::on_btn_ok_clicked()
         return;
     }
 
-    this->isCheck = true;
+    this->hasResult = true;
     this->close();
 }
-

@@ -2,13 +2,11 @@
 
 #include <QDir>
 #include <QMessageBox>
-#include <exception>
-#include <QException>
+#include <QApplication>
+#include <QStandardPaths>
 
-ProjectManager::ProjectManager()
-{
-
-}
+#include <QFile>
+#include <QTextStream>
 
 QString ProjectManager::projectName_;
 QString ProjectManager::projectPath_;
@@ -26,27 +24,103 @@ QString ProjectManager::projectName()
 
 QString ProjectManager::projectPath()
 {
-    return projectPath_ + "/Project";
+    return projectPath_ + "/workspace";
+}
+
+QString ProjectManager::projectWorkspace()
+{
+    return QString();
 }
 
 QString ProjectManager::projectTemp()
 {
-    return projectPath_ + "/Temp";
+    return projectPath_ + "/temp";
 }
-/*
-static QString* GetLastErrorHandle() {
-    static QString qstr;
-    return &qstr;
-}
-static void SetLastError(const QString& str)
+
+static QString _getRecentFilePath()
 {
-    *GetLastErrorHandle() = str;
+    return QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + QApplication::applicationName() + "_recent.txt";
 }
-QString ProjectManager::GetLastError()
+
+static QVector<QString>* _recentProjects()
 {
-    return QString();
+    static QVector<QString>* p = nullptr;
+
+    if (p == nullptr)
+    {
+        p = new QVector<QString>;
+
+        QFile file{ _getRecentFilePath() };
+
+        file.open(QIODevice::ReadWrite | QIODevice::Text);
+        auto stream = QTextStream{ &file };
+        while (!stream.atEnd())
+        {
+            auto line = stream.readLine();
+            p->push_back(line);
+        }
+
+        file.close();
+    }
+
+    return p;
 }
-*/
+
+static void _addRecentProject(const QString& proj)
+{
+    if (_recentProjects() == nullptr)
+    {
+        return;
+    }
+
+    for (auto it = _recentProjects()->begin(); it != _recentProjects()->end(); it++)
+    {
+        if ((*it) == proj)
+        {
+            _recentProjects()->erase(it);
+            break;
+        }
+    }
+    
+    int size = _recentProjects()->size();
+    if (size >= 15)
+    {
+        for (int i = 0; i < size - 15; i++)
+        {
+            _recentProjects()->remove(0);
+        }
+    }
+    _recentProjects()->push_back(proj);
+}
+
+static void _writeRecentProject()
+{
+    QFile file{ _getRecentFilePath() };
+    if (file.exists()) {
+        file.remove();
+    }
+
+    file.open(QIODevice::ReadWrite | QIODevice::Text);
+
+    for (auto& item : *_recentProjects())
+    {
+        QTextStream{ &file } << item << endl;
+    }
+
+    file.close();
+}
+
+QVector<QString> ProjectManager::recentProjects()
+{
+    return QVector<QString>{ *_recentProjects() };
+}
+
+void ProjectManager::clearRecentProjects()
+{
+    _recentProjects()->clear();
+    _writeRecentProject();
+}
+
 ActionEvents<>& ProjectManager::openProjectEvent()
 {
     static Action<> event;
@@ -73,7 +147,8 @@ ActionEvents<>& ProjectManager::saveEvent()
 
 bool ProjectManager::openProject(const QString& folderPath)
 {
-    if (isOpened_) {
+    if (isOpened_)
+    {
         return false;
     }
     QDir dir(folderPath);
@@ -85,25 +160,37 @@ bool ProjectManager::openProject(const QString& folderPath)
     projectPath_ = folderPath;
     isOpened_ = true;
 
-    ProjectInfo info;
-    info.projectName = projectName_;
-    info.projectPath = projectPath_;
+    _addRecentProject(folderPath);
+    _writeRecentProject();
 
     static_cast<Action<>&>(openProjectEvent()).Invoke();
 
     return true;
 }
 
+static bool isFolderEmpty(const QString& folder)
+{
+    QDir dir{ folder };
+    dir.setFilter(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+    return dir.entryInfoList().count() <= 0;
+}
+
 bool ProjectManager::newProject(const QString& folderPath)
 {
     QDir dir(folderPath);
-    if (dir.exists()) {
-        QMessageBox::warning(nullptr, "alert", QObject::tr("文件夹存在"));
-        return false;
+    if (dir.exists())
+    {
+        if (!isFolderEmpty(folderPath)) {
+            QMessageBox::warning(nullptr, "alert", QObject::tr("文件夹存在"));
+            return false;
+        }
     }
-    dir.mkdir(folderPath);
-    dir.mkdir("Project");
-    dir.mkdir("Temp");
+    else
+    {
+        dir.mkdir(folderPath);
+    }
+    dir.mkdir(folderPath + "/workspace");
+    dir.mkdir(folderPath + "/temp");
     return true;
 }
 
@@ -118,6 +205,10 @@ bool ProjectManager::newAndOpenProject(const QString& folderPath)
 
 bool ProjectManager::closeProject()
 {
+    if (!isOpened_)
+    {
+        return true;
+    }
     if (!static_cast<Function<bool>&>(closingProjectEvent()).IsValidReturnInvoke()) {
         return false;
     }

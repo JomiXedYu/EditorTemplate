@@ -23,22 +23,35 @@
      <height>22</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menu">
+   <widget class="QMenu" name="menu_file">
     <property name="title">
      <string>文件(&amp;F)</string>
     </property>
-    <widget class="QMenu" name="menu_3">
+    <widget class="QMenu" name="menu_file_new">
      <property name="title">
       <string>新建(&amp;N)</string>
      </property>
      <addaction name="action_file_new_project"/>
      <addaction name="action_file_new_file"/>
     </widget>
-    <addaction name="menu_3"/>
+    <widget class="QMenu" name="menu_file_recent">
+     <property name="title">
+      <string>最近打开的项目</string>
+     </property>
+     <addaction name="separator"/>
+     <addaction name="separator"/>
+     <addaction name="action_file_recent_clear"/>
+     <addaction name="separator"/>
+    </widget>
+    <addaction name="menu_file_new"/>
+    <addaction name="action_file_openproj"/>
+    <addaction name="menu_file_recent"/>
+    <addaction name="separator"/>
+    <addaction name="action_file_closeproj"/>
     <addaction name="separator"/>
     <addaction name="action_file_exit"/>
    </widget>
-   <widget class="QMenu" name="menu_2">
+   <widget class="QMenu" name="menu_edit">
     <property name="title">
      <string>编辑(&amp;E)</string>
     </property>
@@ -47,20 +60,20 @@
     <addaction name="separator"/>
     <addaction name="action_2"/>
    </widget>
-   <widget class="QMenu" name="menu_H">
+   <widget class="QMenu" name="menu_help">
     <property name="title">
      <string>帮助(&amp;H)</string>
     </property>
    </widget>
-   <widget class="QMenu" name="menu_4">
+   <widget class="QMenu" name="menu_view">
     <property name="title">
      <string>视图(&amp;V)</string>
     </property>
    </widget>
-   <addaction name="menu"/>
-   <addaction name="menu_2"/>
-   <addaction name="menu_4"/>
-   <addaction name="menu_H"/>
+   <addaction name="menu_file"/>
+   <addaction name="menu_edit"/>
+   <addaction name="menu_view"/>
+   <addaction name="menu_help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
@@ -80,17 +93,6 @@
     <string>项目</string>
    </property>
   </action>
-  <action name="action_file_new_file">
-   <property name="text">
-    <string>文件</string>
-   </property>
-   <property name="toolTip">
-    <string>文件</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+N</string>
-   </property>
-  </action>
   <action name="action_file_exit">
    <property name="text">
     <string>退出(&amp;X)</string>
@@ -106,11 +108,6 @@
     <string>恢复(&amp;Y)</string>
    </property>
   </action>
-  <action name="action">
-   <property name="text">
-    <string>-</string>
-   </property>
-  </action>
   <action name="action_2">
    <property name="text">
     <string>首选项</string>
@@ -119,6 +116,29 @@
   <action name="actionsave">
    <property name="text">
     <string>save</string>
+   </property>
+  </action>
+  <action name="action_file_new_file">
+   <property name="text">
+    <string>文件(&amp;N)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="action_file_openproj">
+   <property name="text">
+    <string>打开项目(&amp;O)</string>
+   </property>
+  </action>
+  <action name="action_file_closeproj">
+   <property name="text">
+    <string>关闭项目</string>
+   </property>
+  </action>
+  <action name="action_file_recent_clear">
+   <property name="text">
+    <string>清除记录</string>
    </property>
   </action>
  </widget>

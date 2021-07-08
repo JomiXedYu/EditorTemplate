@@ -3,12 +3,6 @@
 #include <QString>
 #include <Events.hpp>
 
-struct ProjectInfo
-{
-    QString projectName;
-    QString projectPath;
-};
-
 class ProjectManager
 {
 private:
@@ -16,14 +10,16 @@ private:
     static QString projectPath_;
     static bool isOpened_;
 public:
-    ProjectManager();
+    ProjectManager() = delete;
 public:
     static bool isOpened();
     static QString projectName();
     static QString projectPath();
+    static QString projectWorkspace();
     static QString projectTemp();
 
-    //static QString GetLastError();
+    static QVector<QString> recentProjects();
+    static void clearRecentProjects();
 
     static ActionEvents<>& openProjectEvent();
     static FunctionEvents<bool>& closingProjectEvent();

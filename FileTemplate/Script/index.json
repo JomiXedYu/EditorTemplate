@@ -1,0 +1,12 @@
+[
+	{
+		"name": "Lua脚本 (.lua)",
+		"desc": "创建空的Lua脚本",
+		"file": "luascript.lua"
+	},
+	{
+		"name": "JxLuaCoreLib框架的Lua类 (.lua)",
+		"desc": "创建JxLuaCoreLib框架的Lua类文件",
+		"file": "jxlua.lua"
+	}
+]

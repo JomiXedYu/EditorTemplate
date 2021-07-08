@@ -1,0 +1,12 @@
+[
+	{
+		"name": "纯文本 (.txt)",
+		"desc": "创建空的纯文本文件",
+		"file": "plaintext.txt"
+	},
+	{
+		"name": "Json文件 (.json)",
+		"desc": "创建空的Json文件",
+		"file": "jsondata.json"
+	}
+]

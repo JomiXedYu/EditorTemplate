@@ -306,6 +306,9 @@ QMenu {
 	color: $text_color;
 	border: none;
 }
+QMenu::item::!enabled {
+	color: $mid_gray;
+}
 QMenu::item:selected  {
 	background-color: $btn_color;
 }
